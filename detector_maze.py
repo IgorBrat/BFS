@@ -40,6 +40,20 @@ class DetectorMaze:
                 if self.maze[i][j] == -1:
                     self.maze[i][j] = 0
 
+    def get_neighbours(self, position: tuple):
+        row, column = position
+        res = []
+        actions = [
+            ("up", (row + 1, column)),
+            ("down", (row - 1, column)),
+            ("left", (row, column - 1)),
+            ("right", (row, column + 1)),
+        ]
+        for direction, (row, column) in actions:
+            if 0 <= row < self.height and 0 <= column < self.width and not self.maze[row][column]:
+                res.append((direction, (row, column)))
+        return res
+
     def print(self):
         for row in self.maze:
             for el in row:
