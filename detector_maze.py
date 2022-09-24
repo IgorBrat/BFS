@@ -1,10 +1,9 @@
 from node import Node
 from bfs.my_queue import Queue
-from step import Step
 
 
 class DetectorMaze:
-    def __init__(self, input_file: str, output_file: str):
+    def __init__(self, input_file: str):
         with open(input_file) as file:
             maze = file.read().splitlines()
         self.height = len(maze)
@@ -18,7 +17,6 @@ class DetectorMaze:
                 row.append(int(maze[i][j]))
             self.maze.append(row)
         self.__spread_detectors()
-        self.path = []
 
     def __spread_detectors(self):
         #  Time complexity is O(n^2), should think on reducing it
@@ -49,25 +47,23 @@ class DetectorMaze:
     def get_neighbours(self, position: tuple):
         row, column = position
         res = []
-        actions = [
-            (Step.UP, (row + 1, column)),
-            (Step.DOWN, (row - 1, column)),
-            (Step.LEFT, (row, column - 1)),
-            (Step.RIGHT, (row, column + 1)),
+        candidates = [
+            (row + 1, column),
+            (row - 1, column),
+            (row, column - 1),
+            (row, column + 1),
         ]
-        for step, (row, column) in actions:
+        for (row, column) in candidates:
             if 0 <= row < self.height and 0 <= column < self.width and self.maze[row][column]:
-                res.append((step, (row, column)))
+                res.append((row, column))
         return res
 
-    def __get_len_of_path(self, node: Node):
-        len_of_path = 0
-        self.path.append(node.position)
+    def __get_path(self, node: Node):
+        path = [node.position]
         while node.parent is not None:
-            len_of_path += 1
             node = node.parent
-            self.path.append(node.position)
-        return len_of_path
+            path.append(node.position)
+        return path
 
     def bfs_last_column(self, start: tuple):
         if start[0] not in range(self.height) or start[1] not in range(self.width):
@@ -77,20 +73,39 @@ class DetectorMaze:
         queue = Queue()
         explored = set()
         if start[1] == self.width - 1:
-            self.path.append(start)
-            return 0
+            return 0, [start]
         start = Node(start)
         queue.add(start)
         while True:
             if queue.is_empty():
-                return -1
+                return -1, None
             node = queue.remove()
             if node.position[1] == self.width - 1:
-                return self.__get_len_of_path(node)
+                path = self.__get_path(node)
+                return len(path) - 1, path
             explored.add(node.position)
-            for step, position in self.get_neighbours(node.position):
+            for position in self.get_neighbours(node.position):
                 if not queue.contains_element(position) and position not in explored:
-                    queue.add(Node(position, node, step))
+                    queue.add(Node(position, node))
+
+    def find_shortest_path(self, output_file: str):
+        paths = []
+        for i in range(self.height):
+            if self.maze[i][0] == 1:
+                curr_path_len, curr_path = self.bfs_last_column((i, 0))
+                if curr_path_len == self.width:
+                    self.print_solution(curr_path)
+                    self.write_res_to_file(output_file, curr_path)
+                    return
+                elif curr_path_len != -1:
+                    paths.append((i, curr_path))
+        if len(paths) == 0:
+            print("No path available")
+            self.write_res_to_file(output_file, [])
+        else:
+            paths.sort(key=lambda el: len(el[1]))
+            self.print_solution(paths[0][1])
+            self.write_res_to_file(output_file, paths[0][1])
 
     def print_maze(self):
         for row in self.maze:
@@ -101,14 +116,28 @@ class DetectorMaze:
                     print(el, end=" ")
             print()
 
-    def print_solution(self):
+    def print_solution(self, curr_path):
         for i in range(self.height):
             for j in range(self.width):
                 el = self.maze[i][j]
-                if (i, j) in self.path:
+                if (i, j) in curr_path:
                     print('\033[92m' + str(el) + '\033[0m', end=" ")
                 elif el == 0:
                     print('\033[91m' + str(el) + '\033[0m', end=" ")
                 else:
                     print(el, end=" ")
             print()
+
+    def write_res_to_file(self, output_file: str, path):
+        with open(output_file, 'w') as file:
+            for i in range(self.height):
+                for j in range(self.width):
+                    el = self.maze[i][j]
+                    if (i, j) in path:
+                        file.write(f"{el} ")
+                    elif el == 0:
+                        file.write("# ")
+                    else:
+                        file.write("_ ")
+                file.write("\n")
+            file.write("\nLength of the shortest path: " + str(len(path)-1))
