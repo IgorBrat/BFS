@@ -1,3 +1,8 @@
+from node import Node
+from bfs.my_queue import Queue
+from step import Step
+
+
 class DetectorMaze:
     def __init__(self, input_file: str, output_file: str):
         with open(input_file) as file:
@@ -13,6 +18,7 @@ class DetectorMaze:
                 row.append(int(maze[i][j]))
             self.maze.append(row)
         self.__spread_detectors()
+        self.path = []
 
     def __spread_detectors(self):
         #  Time complexity is O(n^2), should think on reducing it
@@ -44,18 +50,65 @@ class DetectorMaze:
         row, column = position
         res = []
         actions = [
-            ("up", (row + 1, column)),
-            ("down", (row - 1, column)),
-            ("left", (row, column - 1)),
-            ("right", (row, column + 1)),
+            (Step.UP, (row + 1, column)),
+            (Step.DOWN, (row - 1, column)),
+            (Step.LEFT, (row, column - 1)),
+            (Step.RIGHT, (row, column + 1)),
         ]
-        for direction, (row, column) in actions:
-            if 0 <= row < self.height and 0 <= column < self.width and not self.maze[row][column]:
-                res.append((direction, (row, column)))
+        for step, (row, column) in actions:
+            if 0 <= row < self.height and 0 <= column < self.width and self.maze[row][column]:
+                res.append((step, (row, column)))
         return res
 
-    def print(self):
+    def __get_len_of_path(self, node: Node):
+        len_of_path = 0
+        self.path.append(node.position)
+        while node.parent is not None:
+            len_of_path += 1
+            node = node.parent
+            self.path.append(node.position)
+        return len_of_path
+
+    def bfs_last_column(self, start: tuple):
+        if start[0] not in range(self.height) or start[1] not in range(self.width):
+            raise IndexError("Element is out of bonds of the maze")
+        if self.maze[start[0]][start[1]] == 0:
+            raise ValueError("Can`t start from detector field range")
+        queue = Queue()
+        explored = set()
+        if start[1] == self.width - 1:
+            self.path.append(start)
+            return 0
+        start = Node(start)
+        queue.add(start)
+        while True:
+            if queue.is_empty():
+                return -1
+            node = queue.remove()
+            if node.position[1] == self.width - 1:
+                return self.__get_len_of_path(node)
+            explored.add(node.position)
+            for step, position in self.get_neighbours(node.position):
+                if not queue.contains_element(position) and position not in explored:
+                    queue.add(Node(position, node, step))
+
+    def print_maze(self):
         for row in self.maze:
             for el in row:
-                print(el, end=" ")
+                if el == 0:
+                    print('\033[91m' + str(el) + '\033[0m', end=" ")
+                else:
+                    print(el, end=" ")
+            print()
+
+    def print_solution(self):
+        for i in range(self.height):
+            for j in range(self.width):
+                el = self.maze[i][j]
+                if (i, j) in self.path:
+                    print('\033[92m' + str(el) + '\033[0m', end=" ")
+                elif el == 0:
+                    print('\033[91m' + str(el) + '\033[0m', end=" ")
+                else:
+                    print(el, end=" ")
             print()
