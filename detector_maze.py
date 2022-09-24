@@ -44,7 +44,7 @@ class DetectorMaze:
                 if self.maze[i][j] == -1:
                     self.maze[i][j] = 0
 
-    def get_neighbours(self, position: tuple):
+    def __get_neighbours(self, position: tuple):
         row, column = position
         res = []
         candidates = [
@@ -84,7 +84,7 @@ class DetectorMaze:
                 path = self.__get_path(node)
                 return len(path) - 1, path
             explored.add(node.position)
-            for position in self.get_neighbours(node.position):
+            for position in self.__get_neighbours(node.position):
                 if not queue.contains_element(position) and position not in explored:
                     queue.add(Node(position, node))
 
